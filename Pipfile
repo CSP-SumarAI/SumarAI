@@ -1,0 +1,11 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+openai-whisper = "*"
+textwrap3 = "*"
+nltk = "*"
+
+[dev-packages]
