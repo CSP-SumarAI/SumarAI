@@ -7,5 +7,7 @@ name = "pypi"
 openai-whisper = "*"
 textwrap3 = "*"
 nltk = "*"
+pandas = "*"
 
 [dev-packages]
+ipykernel = "*"
