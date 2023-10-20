@@ -8,6 +8,13 @@ openai-whisper = "*"
 textwrap3 = "*"
 nltk = "*"
 pandas = "*"
+langchain = "*"
+openai = "*"
+tiktoken = "*"
+chromadb = "*"
+sentence-transformers = "*"
+instructorembedding = "*"
+scikit-learn = "*"
 
 [dev-packages]
 ipykernel = "*"
