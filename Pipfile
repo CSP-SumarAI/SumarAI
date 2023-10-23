@@ -15,6 +15,9 @@ chromadb = "*"
 sentence-transformers = "*"
 instructorembedding = "*"
 scikit-learn = "*"
+matplotlib = "*"
+awswrangler = "*"
+python-dotenv = "*"
 
 [dev-packages]
 ipykernel = "*"
