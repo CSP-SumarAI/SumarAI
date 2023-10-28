@@ -5,37 +5,45 @@ import pathlib
 import pandas as pd
 import awswrangler as wr
 import boto3
+import tarfile
+import logging
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
 bucket = os.getenv('S3_BUCKET')
 region = os.getenv('REGION')
+localmode = os.getenv('LOCAL_MODE', False)
 
 root = str(pathlib.Path().absolute()).split("notebooks")[0]
-path = root + 'notebooks/csv/transcripts-0[0-9].csv'
+directory = root + '/podcasts-no-audio-13GB/'
+metadatafile = 'metadata.tsv'
+tarfiles = ['podcasts-transcripts-0to2.tar.gz', 'podcasts-transcripts-3to5.tar.gz', 'podcasts-transcripts-6to7.tar.gz']
 
 my_session = boto3.Session(region_name=region, profile_name='my-dev-profile')
 
-def write_to_s3(df, filename, filetype):
+def write_to_s3(df, filename, filetype=None):
+    filetype = 'transcripts'
     path1 = f"s3://{bucket}/{filetype}/{filename}.csv"
 
     wr.s3.to_csv(df, path1, index=False, boto3_session=my_session)
     
-df = pd.read_csv(path, index_col=0)
 
-def parse_times_and_speakers(filepath):
-    root = str(pathlib.Path().absolute()).split("notebooks")[0]
-    rootpath = root + filepath
-    for path in filepath, rootpath:
-        try:                                                           
-            with open(path) as data_file:    
-                data = json.load(data_file)
-                break
-        except Exception as e:
-            continue
-    else:                                               
-        raise Exception
+def parse_times_and_speakers(filepath, file=None, filename=None):
+    if filepath:
+        root = str(pathlib.Path().absolute()).split("notebooks")[0]
+        rootpath = root + filepath
+        for path in filepath, rootpath, file:
+            try:                                                           
+                with open(path) as data_file:    
+                    data = json.load(data_file)
+                    break
+            except Exception as e:
+                print(e)
+                continue
+    else:
+        data = json.load(file)
+        filepath = filename
     
     df = pd.json_normalize(data['results'], 'alternatives').dropna(subset=['transcript', 'words'])
     df['startTime'] = df.words.apply(lambda x: min([float(v[:-1]) for i in x for k, v in i.items() if k == 'startTime']))
@@ -51,18 +59,21 @@ def parse_times_and_speakers(filepath):
 
     return df
 
-def parse_transcript(filepath):
-    root = str(pathlib.Path().absolute()).split("notebooks")[0]
-    rootpath = root + filepath
-    for path in filepath, rootpath:
-        try:                                                           
-            with open(path) as data_file:    
-                data = json.load(data_file)
-                break
-        except Exception as e:
-            continue
-    else:                                               
-        raise Exception
+def parse_transcript(filepath, file=None, filename=None):
+    if filepath:
+        root = str(pathlib.Path().absolute()).split("notebooks")[0]
+        rootpath = root + filepath
+        for path in filepath, rootpath, file:
+            try:                                                           
+                with open(path) as data_file:    
+                    data = json.load(data_file)
+                    break
+            except Exception as e:
+                print(e)
+                continue
+    else:
+        data = json.load(file)
+        filepath = filename
     df = pd.json_normalize(data['results'], 'alternatives').dropna(subset=['transcript', 'words']).drop(columns=['confidence', 'words'])
     df = pd.DataFrame([' '.join(df['transcript'].to_list())], columns=['transcript'])
     df['show'] = "show_" + filepath.split("show_")[1].split("/")[0]
@@ -70,33 +81,44 @@ def parse_transcript(filepath):
 
     return df
 
-def main():
-    directory = str(pathlib.Path().absolute()).split("notebooks")[0] \
-                + 'podcasts-no-audio-13GB/spotify-podcasts-2020/podcasts-transcripts/0'
+def join_metadata(df):
+    path = directory + metadatafile
+    metadatadf = pd.read_csv(path, sep='\t')
+    transcript_meta_df = df.merge(metadatadf, how='inner', left_on=['show', 'episode'], right_on=['show_filename_prefix', 'episode_filename_prefix'])
+    
+    return transcript_meta_df
 
-    dir = os.listdir(directory)
-    dir.sort()
-    dir = dir[:11]
-
-    dflist = []
-    i = 0
-    for subdir in dir:
-        subdirpath = os.path.join(directory, subdir)
-        if os.path.isdir(subdirpath):
-            print(subdir)
-            for showdir in os.listdir(subdirpath):
-                filepath = os.path.join(subdirpath, showdir)
-                if os.path.isdir(filepath):
-                    for filename in os.listdir(filepath):
-                        f = os.path.join(filepath, filename)
-                        # checking if it is a file
-                        if os.path.isfile(f):
-                            dflist.append(parse_transcript(f))
-                            i += 1
-                            #if i%10 == 0:
-                            #    print(i)
-                                
+def concat_and_upload(dflist, sourcefile, fileid):
     transcriptdf = pd.concat(dflist, axis=0)
+    transcriptdf = join_metadata(transcriptdf)
+    transcriptdf['source_file'] = sourcefile
+    if localmode:
+        transcriptdf.to_csv('notebooks/csv/testfile.csv') 
+    else:
+        s3filename = sourcefile.split(sep='.tar')[0] + '-' + str(fileid)
+        write_to_s3(transcriptdf, s3filename)
+    
 
 if __name__ == "__main__":
-    main()
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+    logging.info('Started processing tarfile')
+    tar = tarfile.open(directory + tarfiles[0])
+
+    df_list = []
+    tar_member = tar.next()
+    file_id = 1
+    while tar_member:
+        file = tar.extractfile(tar_member)
+        if file and tar_member.name.split(sep='.')[-1] == 'json':
+            filename = tar_member.name
+            transcriptdf = parse_transcript(filepath=None, file=file, filename=filename)
+            df_list.append(transcriptdf)
+        if len(df_list) == 1000:
+            logging.info(f'Uploading csv-file nr. {file_id}')
+            concat_and_upload(df_list, tarfiles[0], file_id)
+            df_list = []
+            file_id += 1
+        tar_member = tar.next()    
+    tar.close()
+    logging.info(f'Uploading last csv-file nr. {file_id}')
+    concat_and_upload(df_list, tarfiles[0], file_id)
