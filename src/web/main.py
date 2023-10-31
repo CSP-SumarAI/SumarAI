@@ -1,9 +1,14 @@
 import streamlit as st
 
+st.set_page_config(
+   page_title="SumarAI"
+)
+
 if "prompt" not in st.session_state:
     st.session_state.prompt = None
     st.session_state.options = None
     st.session_state.selected_option = None
+
 
 st.title("SumarAI")
 
@@ -30,7 +35,8 @@ if st.session_state.options:
             disabled = st.session_state.selected_option != None and k != st.session_state.selected_option
             if st.button(option, disabled=disabled):
                 if st.session_state.selected_option == None:
-                    st.session_state.selected_option = k 
+                    st.session_state.selected_option = k
+                    st.rerun()
 
 if st.session_state.selected_option != None:
     chat("assistant", "Selected " + st.session_state.options[st.session_state.selected_option])
