@@ -11,7 +11,10 @@ bucket = os.getenv('S3_BUCKET')
 region = os.getenv('REGION')
 aws_profile = os.getenv('AWS_PROFILE')
 
-my_session = boto3.Session(region_name=region, profile_name=aws_profile)
+try:
+    my_session = boto3.Session(region_name=region, profile_name=aws_profile)
+except Exception:
+    my_session = boto3.Session(region_name=region)
 
 def read_from_s3(filename, filetype=None):
     filetype = 'transcripts'
