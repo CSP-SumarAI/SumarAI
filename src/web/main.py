@@ -1,11 +1,15 @@
 import streamlit as st
-
 st.set_page_config(
    page_title="SumarAI"
 )
 
+from summary import summarize
+from db.local import query
+
+
 if "prompt" not in st.session_state:
     st.session_state.prompt = None
+    st.session_state.db_result = None
     st.session_state.options = None
     st.session_state.selected_option = None
 
@@ -26,17 +30,24 @@ if st.session_state.prompt == None:
 if st.session_state.prompt:
     chat("user", st.session_state.prompt)
     chat("assistant", "Thank you, please stand by for a moment")
-    st.session_state.options = ["Podcast 1", "Podcast 2", "Podcast 3"]
+    st.session_state.db_result = query(st.session_state.prompt)
 
-if st.session_state.options:
+
+if st.session_state.db_result:
     with st.chat_message("assistant"):
-        st.write("Here are your options: ")
-        for k,option in enumerate(st.session_state.options):
-            disabled = st.session_state.selected_option != None and k != st.session_state.selected_option
-            if st.button(option, disabled=disabled):
-                if st.session_state.selected_option == None:
-                    st.session_state.selected_option = k
-                    st.rerun()
+        st.write("Here is the best result: ")
+        metadata = st.session_state.db_result["metadatas"][0][0]
+        st.write(f"{metadata['show_name']} - {metadata['episode_name']}")
+        st.write("Summarizing it now...")
+        summary = summarize(st.session_state.db_result["documents"][0][0])
+        st.write("Here is it's summary: ")
+        st.write(summary["choices"][0]["message"]["content"])
+        # for k,option in enumerate(st.session_state.options):
+        #     disabled = st.session_state.selected_option != None and k != st.session_state.selected_option
+        #     if st.button(option, disabled=disabled):
+        #         if st.session_state.selected_option == None:
+        #             st.session_state.selected_option = k
+        #             st.rerun()
 
-if st.session_state.selected_option != None:
-    chat("assistant", "Selected " + st.session_state.options[st.session_state.selected_option])
+#if st.session_state.selected_option != None:
+#    chat("assistant", "Selected " + st.session_state.options[st.session_state.selected_option])
