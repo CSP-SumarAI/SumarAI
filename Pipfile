@@ -4,21 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-openai-whisper = "*"
 textwrap3 = "*"
-nltk = "*"
 streamlit = "*"
 pandas = "*"
-langchain = "*"
-openai = "*"
-tiktoken = "*"
 chromadb = "*"
-sentence-transformers = "*"
-instructorembedding = "*"
 scikit-learn = "*"
 matplotlib = "*"
 awswrangler = "*"
 python-dotenv = "*"
+instructorembedding = "*"
+sentence-transformers = "*"
 
 [dev-packages]
 ipykernel = "*"
