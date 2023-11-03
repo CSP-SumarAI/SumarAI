@@ -20,6 +20,6 @@ RUN pip install -r requirements.txt
 # The app listens at port 8080
 # EXPOSE 8080
 
-# Run app.py when the container launches
+# Run embed_and_ingest as module when the container launches
 CMD python -m src.db.embed_and_ingest
 # CMD ["python", "-m src.db.embed_and_ingest"]

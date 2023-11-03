@@ -70,8 +70,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     logging.info('Started process')
     
-    files = s3_client.list_objects(Bucket='sumar-ai')['Contents']
-    filenames = [f['Key'] for f in files]
+    files = s3_client.list_objects(Bucket='sumar-ai', Prefix='transcripts')['Contents']
+    processed_files_df = read_from_s3('processed_files', 'metadata')
+    processed_files_list = list(processed_files_df.processed_files)
+    filenames = [f['Key'] for f in files if f['Key'] not in processed_files_list]
     logging.info(f'Count of files to process {len(filenames)}.')
 
     for i, filename in enumerate(filenames):
