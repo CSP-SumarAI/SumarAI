@@ -35,19 +35,31 @@ if st.session_state.prompt:
 
 if st.session_state.db_result:
     with st.chat_message("assistant"):
-        st.write("Here is the best result: ")
+        st.write("Here is the best options: ")
         metadata = st.session_state.db_result["metadatas"][0][0]
-        st.write(f"{metadata['show_name']} - {metadata['episode_name']}")
-        st.write("Summarizing it now...")
-        summary = summarize(st.session_state.db_result["documents"][0][0])
-        st.write("Here is it's summary: ")
-        st.write(summary["choices"][0]["message"]["content"])
-        # for k,option in enumerate(st.session_state.options):
-        #     disabled = st.session_state.selected_option != None and k != st.session_state.selected_option
-        #     if st.button(option, disabled=disabled):
-        #         if st.session_state.selected_option == None:
-        #             st.session_state.selected_option = k
-        #             st.rerun()
+        metadata1 = st.session_state.db_result["metadatas"][0][1]
+        metadata2 = st.session_state.db_result["metadatas"][0][2]
 
-#if st.session_state.selected_option != None:
-#    chat("assistant", "Selected " + st.session_state.options[st.session_state.selected_option])
+        if st.session_state.options is None:
+            st.session_state.options = [ f"{metadata['show_name']}", f"{metadata1['show_name']}", f"{metadata2['show_name']}"]
+        
+        for k, option in enumerate(st.session_state.options):
+            disabled = st.session_state.selected_option is not None and k != st.session_state.selected_option
+            if st.button(option,key=f"button_{k}", disabled=disabled):
+                if st.session_state.selected_option is None:
+                    st.session_state.selected_option = k
+                    st.rerun()
+
+if st.session_state.selected_option is not None:
+    #chat("assistant", "Selected " + st.session_state.options[st.session_state.selected_option])
+    st.session_state.db_result = query(st.session_state.options[st.session_state.selected_option])
+    r = st.session_state.options[st.session_state.selected_option]
+    if st.session_state.db_result:
+        with st.chat_message("assistant"):
+            metadata_selected = st.session_state.db_result["metadatas"][0][0]
+            st.write("Summarizing the selected " + st.session_state.options[st.session_state.selected_option])
+            summary = summarize(r)
+            st.write("Here is it's summary: ")
+            st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
+            st.write(summary["choices"][0]["message"]["content"])
+       
