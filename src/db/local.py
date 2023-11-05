@@ -53,7 +53,7 @@ def query(prompt):
     query_embedding = model.encode(query_texts).tolist()
     results = collection.query(
         query_embeddings=query_embedding,
-        n_results=1
+        n_results=3
     )
 
     return results
