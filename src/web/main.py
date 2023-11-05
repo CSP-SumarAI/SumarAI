@@ -22,7 +22,7 @@ def chat(person, msg):
     with st.chat_message(person):
         st.write(msg)
 
-chat("assistant", "Hello! Please enter a query")
+chat("assistant", "Hello! What kind of podcasts are you looking for?")
 if st.session_state.prompt == None:
     container = st.empty()
     st.session_state.prompt = container.chat_input()
