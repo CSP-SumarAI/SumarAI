@@ -1,5 +1,7 @@
 import openai
+from util import timeit
 
+@timeit
 def summarize(text):
     api_key = "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"
     openai.api_key = api_key
