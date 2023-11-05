@@ -11,10 +11,10 @@ bucket = os.getenv('S3_BUCKET')
 region = os.getenv('REGION')
 aws_profile = os.getenv('AWS_PROFILE')
 
-try:
+if os.getenv('LOCAL_MODE', False):
     my_session = boto3.Session(region_name=region, profile_name=aws_profile)
-except Exception:
-    my_session = boto3.Session(region_name=region)
+else:
+    my_session = None
 
 def read_from_s3(filename, filetype=None):
     if filetype == None:
