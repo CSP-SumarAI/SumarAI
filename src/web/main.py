@@ -1,9 +1,11 @@
 import streamlit as st
 import time
+import sys
+import os
 st.set_page_config(
    page_title="SumarAI"
 )
-
+sys.path.insert(0, os.path.abspath("../src/"))
 from summary import summarize
 from db.main import query
 
