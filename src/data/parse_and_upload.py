@@ -7,28 +7,23 @@ import awswrangler as wr
 import boto3
 import tarfile
 import logging
+
+sys.path.insert(0, os.path.abspath("../src/data/"))
+from src.data.s3_utils import write_to_s3
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
 bucket = os.getenv('S3_BUCKET')
 region = os.getenv('REGION')
-localmode = os.getenv('LOCAL_MODE', False)
+local_mode = os.getenv('LOCAL_MODE', False)
+parse_mode = os.getenv('PARSE_MODE', 'default')
 
 root = str(pathlib.Path().absolute()).split("notebooks")[0]
 directory = root + '/podcasts-no-audio-13GB/'
 metadatafile = 'metadata.tsv'
 tarfiles = ['podcasts-transcripts-0to2.tar.gz', 'podcasts-transcripts-3to5.tar.gz', 'podcasts-transcripts-6to7.tar.gz']
-
-my_session = boto3.Session(region_name=region, profile_name='my-dev-profile')
-
-def write_to_s3(df, filename, filetype=None):
-    filetype = 'transcripts'
-    path1 = f"s3://{bucket}/{filetype}/{filename}.csv"
-
-    wr.s3.to_csv(df, path1, index=False, boto3_session=my_session)
-    
-
+        
 def parse_times_and_speakers(filepath, file=None, filename=None):
     if filepath:
         root = str(pathlib.Path().absolute()).split("notebooks")[0]
@@ -57,6 +52,9 @@ def parse_times_and_speakers(filepath, file=None, filename=None):
     # Join speakerTags
     df = df.merge(df2[['startTime', 'speakerTag']], left_on='startTime', right_on='startTime').drop(columns=['words', 'confidence'])
 
+    # Add show and episode ids
+    df['show'] = "show_" + filepath.split("show_")[1].split("/")[0]
+    df['episode'] = filepath.split("show_")[1].split("/")[1].split(".")[0]
     return df
 
 def parse_transcript(filepath, file=None, filename=None):
@@ -90,13 +88,17 @@ def join_metadata(df):
 
 def concat_and_upload(dflist, sourcefile, fileid):
     transcriptdf = pd.concat(dflist, axis=0)
-    transcriptdf = join_metadata(transcriptdf)
-    transcriptdf['source_file'] = sourcefile
-    if localmode:
-        transcriptdf.to_csv('notebooks/csv/testfile.csv') 
+    if parse_mode == 'timestamps':
+        filetype = 'transcript_timestamps'
     else:
-        s3filename = sourcefile.split(sep='.tar')[0] + '-' + str(fileid)
-        write_to_s3(transcriptdf, s3filename)
+        transcriptdf = join_metadata(transcriptdf)
+        filetype = 'transcripts'
+    transcriptdf['source_file'] = sourcefile
+    s3filename = sourcefile.split(sep='.tar')[0] + '-' + str(fileid)
+    if local_mode:
+        transcriptdf.to_csv(f'notebooks/csv/{filetype}-{s3filename}.csv') 
+    else:
+        write_to_s3(transcriptdf, s3filename, filetype)
     
 
 if __name__ == "__main__":
@@ -111,7 +113,10 @@ if __name__ == "__main__":
         file = tar.extractfile(tar_member)
         if file and tar_member.name.split(sep='.')[-1] == 'json':
             filename = tar_member.name
-            transcriptdf = parse_transcript(filepath=None, file=file, filename=filename)
+            if parse_mode == 'timestamps':
+                transcriptdf = parse_times_and_speakers(filepath=None, file=file, filename=filename)
+            else:
+                transcriptdf = parse_transcript(filepath=None, file=file, filename=filename)
             df_list.append(transcriptdf)
         if len(df_list) == 1000:
             logging.info(f'Uploading csv-file nr. {file_id}')

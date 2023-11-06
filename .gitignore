@@ -2,6 +2,8 @@
 ##########################
 **/podcasts-no-audio-13GB/
 *.mp3
+**/notebooks/csv/
+**/notebooks/test-db/
 
 # Compiled source #
 ###################
