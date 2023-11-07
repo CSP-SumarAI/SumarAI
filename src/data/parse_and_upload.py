@@ -103,7 +103,7 @@ def concat_and_upload(dflist, sourcefile, fileid):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
-    logging.info('Started processing tarfile')
+    logging.info(f'Started processing tarfile. Local mode {local_mode}')
     tar = tarfile.open(directory + tarfiles[0])
 
     df_list = []
@@ -113,14 +113,18 @@ if __name__ == "__main__":
         file = tar.extractfile(tar_member)
         if file and tar_member.name.split(sep='.')[-1] == 'json':
             filename = tar_member.name
-            if parse_mode == 'timestamps':
+            if parse_mode == 'timestamps' and file_id > 23:
                 transcriptdf = parse_times_and_speakers(filepath=None, file=file, filename=filename)
             else:
-                transcriptdf = parse_transcript(filepath=None, file=file, filename=filename)
+                transcriptdf = pd.DataFrame({'A' : []})
+                # transcriptdf = parse_transcript(filepath=None, file=file, filename=filename)
             df_list.append(transcriptdf)
         if len(df_list) == 1000:
-            logging.info(f'Uploading csv-file nr. {file_id}')
-            concat_and_upload(df_list, tarfiles[0], file_id)
+            if file_id > 23:
+                logging.info(f'Uploading csv-file nr. {file_id}')
+                concat_and_upload(df_list, tarfiles[0], file_id)
+            else:
+                logging.info(f'Skipped upload for csv-file nr. {file_id}')
             df_list = []
             file_id += 1
         tar_member = tar.next()    
