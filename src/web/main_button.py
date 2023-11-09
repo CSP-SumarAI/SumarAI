@@ -1,11 +1,9 @@
 import streamlit as st
 import time
-import sys
-import os
 st.set_page_config(
    page_title="SumarAI"
 )
-sys.path.insert(0, os.path.abspath("../src/"))
+
 from summary import summarize
 from translate import translate_transcript
 from db.main import query
@@ -13,21 +11,20 @@ from db.main import query
 
 if "prompt" not in st.session_state:
     st.session_state.prompt = None
+    st.session_state.prompt1 = None
     st.session_state.db_result = None
     st.session_state.options = None
     st.session_state.selected_option = None
     st.session_state.summary = None
-    st.session_state.metadata = None
-    st.session_state.prompt1 = None
     st.session_state.translated = None
+    st.session_state.metadata = None
 
 st.title("SumarAI")
 
 
 def chat(person, msg):
-    with st.empty():
-        with st.chat_message(person):
-            st.write(msg)
+    with st.chat_message(person):
+        st.write(msg)
 
 chat("assistant", "Hello! Please enter a query")
 if st.session_state.prompt == None:
@@ -73,43 +70,29 @@ if st.session_state.summary is not None:
         st.write("Here is it's summary: ")
         st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
         st.write(st.session_state.summary["choices"][0]["message"]["content"])
-    
-    
 
-    chat("assistant", "what is your preferred language?(e.g. French, Finnish).If you do not wish to translate, type No")
-    if st.session_state.prompt1 == None:
-        container1 = st.empty()
-        st.session_state.prompt1 = container1.chat_input()
-        if st.session_state.prompt1:
-            container1.empty()  
 
-    if st.session_state.prompt1 == "No":
-        chat("user", st.session_state.prompt1) 
-        with st.chat_message("assistant"):
-            st.write(f"Summary: ")
-            st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
-            st.write(st.session_state.summary["choices"][0]["message"]["content"])
 
-    if st.session_state.prompt1 is not None and st.session_state.prompt1 != "No":
-        chat("user", st.session_state.prompt1)
-        summary_selected = st.session_state.summary["choices"][0]["message"]["content"]
-        with st.spinner("Translating..."):
-            metadata_translated = f"{metadata_selected['show_name']}{metadata_selected['episode_name']}" 
-            st.session_state.metadata = translate_transcript(metadata_translated, st.session_state.prompt1)
-            st.session_state.translated = translate_transcript(summary_selected,st.session_state.prompt1)
-   
+#st.session_state.translated = None
 
-if st.session_state.translated is not None:
-    with st.chat_message("assistant"):
-        st.write(f"Here is it's summary in {st.session_state.prompt1}: ")
-        #st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
-        st.write(st.session_state.metadata["choices"][0]["message"]["content"])
-        st.write(st.session_state.translated["choices"][0]["message"]["content"])
+if st.session_state.summary is not None:
+    preferred_language = st.text_input("Enter your preferred language (e.g.Finnish, French, Spanish):")
+    if st.button("Translate"):
+        if preferred_language:
+            summary_selected = st.session_state.summary["choices"][0]["message"]["content"]
+            with st.spinner("Translating..."):
+                st.session_state.translated = translate_transcript(summary_selected, preferred_language)
+                st.write(f"Here is the summary in {preferred_language} language:")
+                st.write(st.session_state.translated["choices"][0]["message"]["content"])
+            
+        else:
+            st.write("Please enter a preferred language.")
 
 
 
 
 
 
-#pip install -r requirements.txt
+
+
 #PYTHONPATH=src streamlit run src/web/main.py
