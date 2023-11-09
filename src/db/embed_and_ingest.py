@@ -6,6 +6,7 @@ import chromadb
 import logging
 import boto3
 from tqdm import tqdm
+import tiktoken
 
 from InstructorEmbedding import INSTRUCTOR
 from langchain.text_splitter import TokenTextSplitter
@@ -18,6 +19,7 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 server_ip = os.getenv("CHROMA_SERVER_IP")
 text_splitter = TokenTextSplitter(chunk_size=2048, chunk_overlap=0)
+encoding = tiktoken.get_encoding("gpt2")
 s3_client = boto3.client("s3")
 ingest_mode = os.getenv("INGEST_MODE", "default")
 ingest_file_count = int(os.getenv("INGEST_FILE_COUNT", 1))
@@ -33,9 +35,21 @@ def preprocess_transcripts(transcripts_df):
     - Remove transcripts with less than 1000 characters
     - Split transcripts into chunks of 2048 tokens
     """
-    transcripts_df["transcript_length"] = transcripts_df["transcript"].apply(lambda x: len(x))
-    transcripts_df = transcripts_df[transcripts_df["transcript_length"] > 1000].copy()
-    transcripts_df["transcript_chunks"] = transcripts_df["transcript"].apply(lambda x: text_splitter.split_text(x))
+    if ingest_mode == "timestamps":
+        transcripts_df["episode_speaker"] = transcripts_df["episode"] + transcripts_df["speakerTag"].astype(str)
+        transcripts_df["transcript"] = np.where(transcripts_df["episode_speaker"] == transcripts_df["episode_speaker"].shift(-1), transcripts_df["transcript"] + " " + transcripts_df["transcript"].shift(-1), transcripts_df["transcript"])
+        transcripts_df["group"] = (transcripts_df["episode_speaker"] != transcripts_df["episode_speaker"].shift()).cumsum()
+        transcripts_df.set_index(transcripts_df.groupby("group").cumcount(), inplace = True)
+        transcripts_df["transcript"] = np.where(transcripts_df.index%2==0, transcripts_df["transcript"], np.nan)
+        transcripts_df["endTime"] = np.where(pd.isna(transcripts_df.transcript.shift(-1)), transcripts_df["endTime"].shift(-1), transcripts_df["endTime"])
+        transcripts_df["paragraph_length"] = transcripts_df.endTime - transcripts_df.startTime
+        transcripts_df = transcripts_df.dropna().reset_index(drop=True)
+        transcripts_df["token_count"] = transcripts_df.transcript.apply(lambda x: len(encoding.encode(x)))
+        transcripts_df = transcripts_df[(transcripts_df.token_count > 20)]
+    else:
+        transcripts_df["transcript_length"] = transcripts_df["transcript"].apply(lambda x: len(x))
+        transcripts_df = transcripts_df[transcripts_df["transcript_length"] > 1000].copy()
+        transcripts_df["transcript_chunks"] = transcripts_df["transcript"].apply(lambda x: text_splitter.split_text(x))
     # transcripts_df = transcripts_df.explode("transcript")
     return transcripts_df.reset_index(drop=True)
 
@@ -119,10 +133,12 @@ if __name__ == "__main__":
         logging.info(f"Started processing file {i+1}: {filename_csv}.")
         transcripts_df = read_from_s3(filename_csv, filetype=filetype)
         # transcripts_df = transcripts_df.head(200)
+        transcripts_df = preprocess_transcripts(transcripts_df)
         logging.info(f"Transcripts dataframe shape for file {filename_csv}: {transcripts_df.shape}.")
         logging.info(f"Creating embeddings for file {i+1}: {filename_csv}.")
         if ingest_mode == "timestamps":
             embeddings_list = []
+            df_list = []
             transcripts_df["id"] = transcripts_df["episode"] + transcripts_df.index.astype(str)
             episodes = transcripts_df.episode.unique()
             grouped = transcripts_df.groupby(transcripts_df.episode)
@@ -130,13 +146,19 @@ if __name__ == "__main__":
                 logging.info(f"Creating embeddings for episode {j+1}/{len(episodes)}.")
                 episode_df = grouped.get_group(episode)
                 embeddings_list.append(create_embeddings_timestamps(episode_df))
-            embeddings = np.concatenate(embeddings_list, axis=0)
-            logging.info(f"Shape of embeddings array {embeddings.shape}.")
+                df_list.append(episode_df)
+                if len(embeddings_list) == 100:
+                    embeddings = np.concatenate(embeddings_list, axis=0)
+                    df = pd.concat(df_list, axis=0)
+                    logging.info(f"Shape of embeddings array {embeddings.shape}.")
+                    logging.info(f"Uploading data to chroma for episodes {j-98}-{j+1} from file {filename_csv}.")
+                    ingest_to_chroma(embeddings, df)
+                    embeddings_list = []
+                    df_list = []
         else:
-            transcripts_df = preprocess_transcripts(transcripts_df)
             embeddings = create_embeddings(transcripts_df)
-        logging.info(f"Uploading data to chroma for file {i+1}: {filename_csv}.")
-        ingest_to_chroma(embeddings, transcripts_df)
+            logging.info(f"Uploading data to chroma for file {i+1}: {filename_csv}.")
+            ingest_to_chroma(embeddings, transcripts_df)
         processed_files_df.loc[processed_files_df.index.max() + 1] = filename
 
     write_to_s3(processed_files_df, processing_log_file, "metadata")
