@@ -104,16 +104,17 @@ if st.session_state.summary is not None:
         with st.spinner("Translating..."):
             metadata_translated = f"{metadata_selected['show_name']}{metadata_selected['episode_name']}" 
             st.session_state.metadata = translate_transcript(metadata_translated, st.session_state.prompt1)
-            st.session_state.translated = translate_transcript(summary_selected,st.session_state.prompt1)
-            #st.session_state.translated = translator_text(summary_selected,st.session_state.prompt1)
-   
+            #st.session_state.translated = translate_transcript(summary_selected,st.session_state.prompt1)
+            language = st.session_state.prompt1
+            st.session_state.translated = translator_text(summary_selected,language)
 
 if st.session_state.translated is not None:
     with st.chat_message("assistant"):
         st.write(f"Here is it's summary in {st.session_state.prompt1}: ")
         #st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
         st.write(st.session_state.metadata["choices"][0]["message"]["content"])
-        st.write(st.session_state.translated["choices"][0]["message"]["content"])
+        #st.write(st.session_state.translated["choices"][0]["message"]["content"])
+        st.write(st.session_state.translated)
 
 
 
