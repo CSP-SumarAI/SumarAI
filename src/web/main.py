@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath("../src/"))
 from summary import summarize
 from translate import translate_transcript
 from db.main import query
-
+from google_translate import translator_text
 
 if "prompt" not in st.session_state:
     st.session_state.prompt = None
@@ -32,13 +32,20 @@ def chat(person, msg):
 chat("assistant", "Hello! Please enter a query")
 if st.session_state.prompt == None:
     container = st.empty()
-    st.session_state.prompt = container.chat_input()
+    st.session_state.prompt = container.chat_input("query")
     if st.session_state.prompt:
         container.empty()
-
-
 if st.session_state.prompt:
     chat("user", st.session_state.prompt)
+    chat("assistant", "what is your preferred language?(e.g. French, Finnish).If you do not wish to translate, type No")
+    if st.session_state.prompt1 == None:
+        container1 = st.empty()
+        st.session_state.prompt1 = container1.chat_input("language")
+        if st.session_state.prompt1:
+            container1.empty() 
+
+if st.session_state.prompt1 is not None:
+    chat("user", st.session_state.prompt1)
     chat("assistant", "Thank you, please stand by for a moment")
     if st.session_state.db_result is None:
             st.session_state.db_result = query(st.session_state.prompt)
@@ -68,35 +75,37 @@ if st.session_state.selected_option is not None:
         with st.spinner("Summarizing..."):
             st.session_state.summary = summarize(transcript_selected[0:6000])
 
+# if st.session_state.summary is not None:
+#     with st.chat_message("assistant"):
+#         st.write("Here is it's summary: ")
+#         st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
+#         st.write(st.session_state.summary["choices"][0]["message"]["content"])
+    
+    
 if st.session_state.summary is not None:
-    with st.chat_message("assistant"):
-        st.write("Here is it's summary: ")
-        st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
-        st.write(st.session_state.summary["choices"][0]["message"]["content"])
-    
-    
-
-    chat("assistant", "what is your preferred language?(e.g. French, Finnish).If you do not wish to translate, type No")
-    if st.session_state.prompt1 == None:
-        container1 = st.empty()
-        st.session_state.prompt1 = container1.chat_input()
-        if st.session_state.prompt1:
-            container1.empty()  
+    # chat("assistant", "what is your preferred language?(e.g. French, Finnish).If you do not wish to translate, type No")
+    # if st.session_state.prompt1 == None:
+    #     container1 = st.empty()
+    #     st.session_state.prompt1 = container1.chat_input()
+    #     if st.session_state.prompt1:
+    #         container1.empty()  
 
     if st.session_state.prompt1 == "No":
-        chat("user", st.session_state.prompt1) 
+         
         with st.chat_message("assistant"):
             st.write(f"Summary: ")
             st.write(f"{metadata_selected['show_name']} - {metadata_selected['episode_name']}")
             st.write(st.session_state.summary["choices"][0]["message"]["content"])
 
-    if st.session_state.prompt1 is not None and st.session_state.prompt1 != "No":
-        chat("user", st.session_state.prompt1)
+    if st.session_state.prompt1 != "No":
+        
         summary_selected = st.session_state.summary["choices"][0]["message"]["content"]
+        chat("assistant", "Thank you, please stand by for a moment for the translation")
         with st.spinner("Translating..."):
             metadata_translated = f"{metadata_selected['show_name']}{metadata_selected['episode_name']}" 
             st.session_state.metadata = translate_transcript(metadata_translated, st.session_state.prompt1)
             st.session_state.translated = translate_transcript(summary_selected,st.session_state.prompt1)
+            #st.session_state.translated = translator_text(summary_selected,st.session_state.prompt1)
    
 
 if st.session_state.translated is not None:
