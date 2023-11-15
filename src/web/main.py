@@ -5,7 +5,7 @@ import os
 st.set_page_config(
    page_title="SumarAI"
 )
-sys.path.insert(0, os.path.abspath("../src/"))
+sys.path.insert(0, os.path.abspath("../"))
 from summary import summarize
 from translate import translate_transcript
 from db.main import query
@@ -21,7 +21,7 @@ if "prompt" not in st.session_state:
     st.session_state.prompt1 = None
     st.session_state.translated = None
 
-st.title("SumarAI")
+st.title("SumarAI - Podcast Summarizer")
 
 
 def chat(person, msg):
@@ -29,10 +29,10 @@ def chat(person, msg):
         with st.chat_message(person):
             st.write(msg)
 
-chat("assistant", "Hello! Please enter a query")
+chat("assistant", "Hello! Please enter a query to seach for interesting podcast episodes.")
 if st.session_state.prompt == None:
     container = st.empty()
-    st.session_state.prompt = container.chat_input("query")
+    st.session_state.prompt = container.chat_input("I'm looking for podcasts about sports.")
     if st.session_state.prompt:
         container.empty()
 if st.session_state.prompt:

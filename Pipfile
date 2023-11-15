@@ -16,7 +16,8 @@ sentence-transformers = "*"
 scikit-learn = "*"
 langchain = "*"
 tiktoken = "*"
-openai = "*"
+openai = "==0.28"
+google-trans-new = "*"
 
 [dev-packages]
 ipykernel = "*"
