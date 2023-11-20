@@ -3,6 +3,7 @@ from InstructorEmbedding import INSTRUCTOR
 import chromadb
 from dotenv import load_dotenv, find_dotenv
 import os
+import pandas as pd
 
 load_dotenv(find_dotenv())
 
@@ -20,6 +21,14 @@ def query(prompt):
     )
 
     return results
+    
+
+def episode_selected(result):
+    result_df = pd.json_normalize(result["metadatas"][0])
+    result_df["episode_id"] = result["ids"][0]
+
+    return result_df
+
 
 model_name = "hkunlp/instructor-large"
 model = load_model()
