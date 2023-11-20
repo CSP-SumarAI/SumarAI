@@ -12,14 +12,17 @@ def load_model():
     return INSTRUCTOR(model_name)
 
 @timeit
-def query(prompt):
+def query(prompt, n=3):
     query_texts=[["Represent the statement for retrieving podcast documents: ", prompt]]
     query_embedding = model.encode(query_texts).tolist()
     results = collection.query(
         query_embeddings=query_embedding,
-        n_results=3
+        n_results=n,
     )
 
+    for k in results.keys():
+        if results[k]:
+            results[k][0] = results[k][0][n-3:n]
     return results
     
 

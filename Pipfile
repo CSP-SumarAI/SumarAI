@@ -18,6 +18,8 @@ langchain = "*"
 tiktoken = "*"
 openai = "==0.28"
 google-trans-new = "*"
+google-translate = "*"
+deep-translator = "*"
 
 [dev-packages]
 ipykernel = "*"
