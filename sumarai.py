@@ -151,6 +151,7 @@ if st.session_state.translated is not None:
         #st.write(st.session_state.translated["choices"][0]["message"]["content"])
         st.write(st.session_state.translated)
 
+if st.session_state.translated is not None or (st.session_state.summary is not None and st.session_state.prompt1.lower() == "no"):
     if st.session_state.results is None:
         chat("assistant", "Do you wish to know more about a specific part of the episode? Please enter you query/topic below.")
         if st.session_state.prompt2 == None:
@@ -161,8 +162,11 @@ if st.session_state.translated is not None:
                 chat("user", st.session_state.prompt2)
     if st.session_state.prompt2 is not None and st.session_state.prompt2.lower() != "no":
         episode = st.session_state.episode
-        st.session_state.translated_prompt = translator_text(st.session_state.prompt2, "en")
-        st.session_state.results = queryTimestamps(st.session_state.translated_prompt, episode)
+        if st.session_state.prompt1.lower() != "no":
+            st.session_state.translated_prompt = translator_text(st.session_state.prompt2, "en")
+            st.session_state.results = queryTimestamps(st.session_state.translated_prompt, episode)
+        else:
+            st.session_state.results = queryTimestamps(st.session_state.prompt2, episode)
         if not st.session_state.results.empty:
             if 'startTime' in st.session_state.results.columns:
                 with st.chat_message("assistant"):
@@ -177,7 +181,10 @@ if st.session_state.translated is not None:
 
                         for k, option in enumerate(options):
                             with st.expander(f"{option['startTime']} seconds - {option['endTime']} seconds"):
-                                paragraph = translator_text(option['paragraph'], st.session_state.prompt1.lower())
+                                if st.session_state.prompt1.lower() != "no":
+                                    paragraph = translator_text(option['paragraph'], st.session_state.prompt1.lower())
+                                else:
+                                    paragraph = option['paragraph']
                                 st.write(f"{paragraph}")                    
 
 
