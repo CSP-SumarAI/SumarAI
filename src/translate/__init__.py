@@ -3,7 +3,7 @@ from util import timeit
 
 @timeit
 def translate_transcript(text, lang):
-    api_key = "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"
+    api_key = "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"
     openai.api_key = api_key
 
     user_message_content = f"{text}"
