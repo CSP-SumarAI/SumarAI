@@ -1,9 +1,14 @@
 import openai
+import os
 from util import timeit
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
+
+api_key = os.getenv("OPEN_AI_API_KEY")
 
 @timeit
 def translate_transcript(text, lang):
-    api_key = "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"
     openai.api_key = api_key
 
     user_message_content = f"{text}"

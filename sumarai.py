@@ -7,13 +7,12 @@ st.set_page_config(
 )
 sys.path.insert(0, os.path.abspath("../sumarai/src/"))
 
-import pysqlite3
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+#import pysqlite3
+#sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 from summary import summarize
 from translate import translate_transcript
 from db.main import query, episode_selected, collection_size, queryTimestamps
-#from db.mainTimestamp import queryTimestamps
 from google_translate import translator_text
 
 if "prompt" not in st.session_state:

@@ -1,7 +1,5 @@
 Welcome
 
-Useful links
+This repository contains the source code for a Helsinki University Computer Science project.
 
-- https://github.com/openai/whisper/blob/main/README.md
-- https://docs.trychroma.com/getting-started
-- https://huggingface.co/gmurro/bart-large-finetuned-filtered-spotify-podcast-summ?text=test
+The application is a Podcast summarizer.
