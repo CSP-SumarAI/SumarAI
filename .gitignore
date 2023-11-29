@@ -4,6 +4,7 @@
 *.mp3
 **/notebooks/csv/
 **/notebooks/test-db/
+**/audio
 
 # Compiled source #
 ###################
@@ -45,3 +46,6 @@ Thumbs.db
 
 # chromadb cache
 .cache
+
+# .env
+.env
